@@ -1,0 +1,12 @@
+{
+    "prices": {
+        "apple": 25,
+        "banana": 10,
+        "peach": 40
+    },
+    "bananas": [
+        {"length": 13, "weight": 5},
+        {"length": 18, "weight": 8},
+        {"length": 13, "weight": 4}
+    ]
+}

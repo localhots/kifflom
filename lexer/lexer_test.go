@@ -27,7 +27,7 @@ func TesBool(t *testing.T) {
 }
 
 func TestString(t *testing.T) {
-	compare(t, lex("\"foo\""), []Item{
+	compare(t, lex(`"foo"`), []Item{
 		Item{String, "foo", 0},
 		Item{EOF, "", 0},
 	})
@@ -51,7 +51,7 @@ func TestNumber(t *testing.T) {
 }
 
 func TestArray(t *testing.T) {
-	compare(t, lex("[1, \"2\", 3]"), []Item{
+	compare(t, lex(`[1, "2", 3]`), []Item{
 		Item{BracketOpen, "[", 0},
 		Item{Number, "1", 0},
 		Item{Comma, ",", 0},
@@ -64,7 +64,7 @@ func TestArray(t *testing.T) {
 }
 
 func TestObject(t *testing.T) {
-	compare(t, lex("{\"a\": 1, \"b\": 2}"), []Item{
+	compare(t, lex(`{"a": 1, "b": 2}`), []Item{
 		Item{BraceOpen, "{", 0},
 		Item{String, "a", 0},
 		Item{Colon, ":", 0},

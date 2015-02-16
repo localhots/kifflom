@@ -23,8 +23,8 @@ type (
 	// Represents a token returned from the scanner
 	Item struct {
 		Token Token  // The type of this item
-		Pos   int    // The starting position, in bytes, of this item in the input string
 		Val   string // The value of this item
+		Pos   int    // The starting position, in bytes, of this item in the input string
 	}
 
 	// Identifies the type of the item
@@ -116,7 +116,11 @@ func (l *Lexer) ignore() {
 
 // Passes an item back to the client
 func (l *Lexer) emit(t Token) {
-	l.items <- Item{t, l.start, l.input[l.start:l.pos]}
+	l.items <- Item{
+		Token: t,
+		Val:   l.input[l.start:l.pos],
+		Pos:   l.start,
+	}
 	l.start = l.pos
 	if t == EOF {
 		close(l.items)
@@ -125,7 +129,12 @@ func (l *Lexer) emit(t Token) {
 
 // Emits an error token with given string as a value and stops lexing
 func (l *Lexer) errorf(format string, args ...interface{}) stateFn {
-	l.items <- Item{Error, l.start, fmt.Sprintf(format, args...)}
+	l.items <- Item{
+		Token: Error,
+		Val:   fmt.Sprintf(format, args...),
+		Pos:   l.start,
+	}
+	close(l.items)
 	return nil
 }
 
@@ -168,7 +177,7 @@ func lexInitial(l *Lexer) stateFn {
 			l.emit(EOF)
 			return nil
 		default:
-			panic("Unexpected symbol: " + string(r))
+			return l.errorf("Unexpected symbol: %c", r)
 		}
 	}
 }
@@ -202,15 +211,20 @@ func lexBool(l *Lexer) stateFn {
 }
 
 func lexNumber(l *Lexer) stateFn {
-	numDots := 0
+	var (
+		last    rune
+		numDots = 0
+	)
 	for {
 		switch r := l.next(); r {
 		case '1', '2', '3', '4', '5', '6', '7', '8', '9', '0':
+			last = r
 		case '.':
 			numDots++
+			last = r
 		default:
 			l.backup()
-			if numDots > 1 {
+			if numDots > 1 || last == '.' {
 				return l.errorf("Invalid number")
 			}
 			l.emit(Number)
@@ -220,6 +234,7 @@ func lexNumber(l *Lexer) stateFn {
 }
 
 func lexString(l *Lexer) stateFn {
+	// Skipping opening quote
 	l.ignore()
 	escaped := false
 	for {
@@ -230,9 +245,12 @@ func lexString(l *Lexer) stateFn {
 			if escaped {
 				escaped = false
 			} else {
-				l.backup() // Going before closing quote
+				// Going before closing quote and emitting
+				l.backup()
 				l.emit(String)
-				l.next() // Skipping closing quote
+				// Skipping closing quote
+				l.next()
+				l.ignore()
 				return lexInitial
 			}
 		case '\n':

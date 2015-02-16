@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 
@@ -12,5 +13,12 @@ func main() {
 	b, _ := ioutil.ReadAll(f)
 
 	lex := lexer.New("foo", string(b))
-	lex.Run()
+	go lex.Run()
+	for {
+		i := lex.NextItem()
+		fmt.Println(i)
+		if i.String() == "EOF" {
+			break
+		}
+	}
 }

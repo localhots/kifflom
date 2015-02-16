@@ -2,7 +2,8 @@
     "prices": {
         "apple": 25,
         "banana": 10,
-        "peach": 40
+        "peach": 40.5,
+        "pomelo": null
     },
     "bananas": [
         {"length": 13, "weight": 5},

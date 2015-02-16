@@ -10,7 +10,6 @@ type (
 	// lexer holds the state of the scanner.
 	Lexer struct {
 		input   string    // the string being scanned
-		state   stateFn   // the next lexing function to enter
 		lineNum int       // Line number
 		pos     int       // current position in the input
 		start   int       // start position of this item
@@ -64,8 +63,8 @@ func New(input string) *Lexer {
 
 // run runs the state machine for the lexer.
 func (l *Lexer) Run() {
-	for l.state = lexInitial; l.state != nil; {
-		l.state = l.state(l)
+	for state := lexInitial; state != nil; {
+		state = state(l)
 	}
 }
 

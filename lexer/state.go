@@ -107,6 +107,8 @@ loop:
 				l.emit(itemString)
 				break loop
 			}
+		case '\n':
+			l.lineNum++
 		case EOF:
 			return l.errorf("String hits EOF")
 		default:

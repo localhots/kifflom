@@ -1,3 +1,6 @@
+// This lexer is based on ideas and code presented in the talk by Rob Pike
+// called "Lexical Scanning in Go". More info could be found in Golang's Blog:
+// http://blog.golang.org/two-go-talks-lexical-scanning-in-go-and
 package lexer
 
 import (
@@ -7,33 +10,33 @@ import (
 )
 
 type (
-	// lexer holds the state of the scanner.
+	// Holds the state of the scanner
 	Lexer struct {
-		input   string    // the string being scanned
+		input   string    // The string being scanned
 		lineNum int       // Line number
-		pos     int       // current position in the input
-		start   int       // start position of this item
-		width   int       // width of last rune read from input
-		items   chan Item // channel of scanned items
+		pos     int       // Current position in the input
+		start   int       // Start position of this item
+		width   int       // Width of last rune read from input
+		items   chan Item // Channel of scanned items
 	}
 
-	// Item represents a token or text string returned from the scanner.
+	// Represents a token returned from the scanner
 	Item struct {
-		Token Token  // The type of this item.
-		Pos   int    // The starting position, in bytes, of this item in the input string.
-		Val   string // The value of this item.
+		Token Token  // The type of this item
+		Pos   int    // The starting position, in bytes, of this item in the input string
+		Val   string // The value of this item
 	}
 
-	// Token identifies the type of lex items.
+	// Identifies the type of the item
 	Token int
 
-	// stateFn represents the state of the scanner as a function that returns the next state.
+	// Represents the state of the scanner as a function that returns the next state
 	stateFn func(*Lexer) stateFn
 )
 
 const (
 	// Special
-	Error Token = iota // error occurred; value is text of error
+	Error Token = iota
 	EOF
 
 	// Symbols
@@ -46,71 +49,34 @@ const (
 	Comma        // ,
 
 	// Types
-	Null   // null
-	Bool   // true, false
-	Number // 0, 2.5
-	String // "foo"
+	Null
+	Bool
+	Number
+	String
 )
 
-// lex creates a new scanner for the input string.
+// Creates a new scanner for the input string
 func New(input string) *Lexer {
-	l := &Lexer{
+	return &Lexer{
 		input: input,
 		items: make(chan Item),
 	}
-	return l
 }
 
-// run runs the state machine for the lexer.
+// Starts the state machine for the lexer
 func (l *Lexer) Run() {
 	for state := lexInitial; state != nil; {
 		state = state(l)
 	}
 }
 
+// Returns the next scanned item and a boolean, which is false on EOF
 func (l *Lexer) NextItem() (item Item, ok bool) {
 	item, ok = <-l.items
 	return
 }
 
-//
-// Lexer stuff
-//
-
-func (i Item) String() string {
-	switch i.Token {
-	case EOF:
-		return "EOF"
-	case Error:
-		return "Error: " + i.Val
-	case BraceOpen:
-		return "{"
-	case BraceClose:
-		return "}"
-	case BracketOpen:
-		return "["
-	case BracketClose:
-		return "]"
-	case Quote:
-		return "\""
-	case Colon:
-		return ":"
-	case Comma:
-		return ","
-	case Null:
-		return "NULL"
-	case Bool:
-		return "Bool: " + i.Val
-	case Number:
-		return "Number: " + i.Val
-	case String:
-		return "String: " + i.Val
-	default:
-		panic("Unreachable")
-	}
-}
-
-// next returns the next rune in the input.
+// Returns the next rune in the input
 func (l *Lexer) next() rune {
 	if int(l.pos) >= len(l.input) {
 		l.width = 0
@@ -122,32 +88,14 @@ func (l *Lexer) next() rune {
 	return r
 }
 
-// peek returns but does not consume the next rune in the input.
+// Returns but does not consume the next rune in the input
 func (l *Lexer) peek() rune {
 	r := l.next()
 	l.backup()
 	return r
 }
 
-// backup steps back one rune. Can only be called once per call of next.
-func (l *Lexer) backup() {
-	l.pos -= l.width
-}
-
-// emit passes an item back to the client.
-func (l *Lexer) emit(t Token) {
-	l.items <- Item{t, l.start, l.input[l.start:l.pos]}
-	l.start = l.pos
-	if t == EOF {
-		close(l.items)
-	}
-}
-
-// ignore skips over the pending input before this point.
-func (l *Lexer) ignore() {
-	l.start = l.pos
-}
-
+// Tells if the following input matches the given string
 func (l *Lexer) acceptString(s string) (ok bool) {
 	if strings.HasPrefix(l.input[l.pos:], s) {
 		l.pos += len(s)
@@ -156,9 +104,29 @@ func (l *Lexer) acceptString(s string) (ok bool) {
 	return false
 }
 
+// Steps back one rune
+func (l *Lexer) backup() {
+	l.pos -= l.width
+}
+
+// Skips over the pending input before this point
+func (l *Lexer) ignore() {
+	l.start = l.pos
+}
+
+// Passes an item back to the client
+func (l *Lexer) emit(t Token) {
+	l.items <- Item{t, l.start, l.input[l.start:l.pos]}
+	l.start = l.pos
+	if t == EOF {
+		close(l.items)
+	}
+}
+
+// Emits an error token with given string as a value and stops lexing
 func (l *Lexer) errorf(format string, args ...interface{}) stateFn {
 	l.items <- Item{Error, l.start, fmt.Sprintf(format, args...)}
-	return nil // Stop lexing
+	return nil
 }
 
 //
@@ -205,17 +173,15 @@ func lexInitial(l *Lexer) stateFn {
 	}
 }
 
-// Skip all spaces
+// Skips all spaces in the input until a visible character is found
 func lexSpace(l *Lexer) stateFn {
 	for {
-		if r := l.peek(); r == ' ' || r == '\t' {
-			l.next()
-		} else {
+		if r := l.next(); r != ' ' && r != '\t' {
+			l.backup()
 			break
 		}
 	}
 	l.ignore()
-
 	return lexInitial
 }
 
@@ -236,19 +202,17 @@ func lexBool(l *Lexer) stateFn {
 }
 
 func lexNumber(l *Lexer) stateFn {
-	hasDot := false
+	numDots := 0
 	for {
-		switch r := l.peek(); r {
+		switch r := l.next(); r {
 		case '1', '2', '3', '4', '5', '6', '7', '8', '9', '0':
-			l.next()
 		case '.':
-			if hasDot {
-				return l.errorf("Invalid number")
-			} else {
-				hasDot = true
-				l.next()
-			}
+			numDots++
 		default:
+			l.backup()
+			if numDots > 1 {
+				return l.errorf("Invalid number")
+			}
 			l.emit(Number)
 			return lexInitial
 		}
@@ -278,5 +242,38 @@ func lexString(l *Lexer) stateFn {
 		default:
 			escaped = false
 		}
+	}
+}
+
+func (i Item) String() string {
+	switch i.Token {
+	case EOF:
+		return "EOF"
+	case Error:
+		return "Error: " + i.Val
+	case BraceOpen:
+		return "{"
+	case BraceClose:
+		return "}"
+	case BracketOpen:
+		return "["
+	case BracketClose:
+		return "]"
+	case Quote:
+		return "\""
+	case Colon:
+		return ":"
+	case Comma:
+		return ","
+	case Null:
+		return "NULL"
+	case Bool:
+		return "Bool: " + i.Val
+	case Number:
+		return "Number: " + i.Val
+	case String:
+		return "String: " + i.Val
+	default:
+		panic("Unreachable")
 	}
 }

@@ -60,7 +60,7 @@ const (
 )
 
 // lex creates a new scanner for the input string.
-func New(name, input string) *Lexer {
+func New(input string) *Lexer {
 	l := &Lexer{
 		input: input,
 		items: make(chan Item),

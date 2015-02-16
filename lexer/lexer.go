@@ -167,13 +167,13 @@ func (l *Lexer) errorf(format string, args ...interface{}) stateFn {
 //
 
 func lexInitial(l *Lexer) stateFn {
-loop:
 	for {
 		switch r := l.next(); r {
 		case ' ', '\t':
 			return lexSpace(l)
 		case '\n':
 			l.lineNum++
+			l.ignore()
 		case 'n':
 			l.backup()
 			return lexNull(l)
@@ -198,20 +198,15 @@ loop:
 		case ',':
 			l.emit(Comma)
 		case 0:
-			break loop
+			l.emit(EOF)
+			return nil
 		default:
 			panic("Unexpected symbol: " + string(r))
 		}
 	}
-
-	// Correctly reached EOF.
-	l.emit(EOF)
-
-	return nil
 }
 
 // Skip all spaces
-// One space has already been seen
 func lexSpace(l *Lexer) stateFn {
 	for {
 		if r := l.peek(); r == ' ' || r == '\t' {
@@ -243,7 +238,6 @@ func lexBool(l *Lexer) stateFn {
 
 func lexNumber(l *Lexer) stateFn {
 	hasDot := false
-loop:
 	for {
 		switch r := l.peek(); r {
 		case '1', '2', '3', '4', '5', '6', '7', '8', '9', '0':
@@ -256,27 +250,24 @@ loop:
 				l.next()
 			}
 		default:
-			break loop
+			l.emit(Number)
+			return lexInitial
 		}
 	}
-
-	l.emit(Number)
-	return lexInitial
 }
 
 func lexString(l *Lexer) stateFn {
 	escaped := false
-loop:
 	for {
 		switch r := l.next(); r {
 		case '\\':
-			escaped = true
+			escaped = !escaped
 		case '"':
 			if escaped {
 				escaped = false
 			} else {
 				l.emit(String)
-				break loop
+				return lexInitial
 			}
 		case '\n':
 			l.lineNum++
@@ -286,6 +277,4 @@ loop:
 			escaped = false
 		}
 	}
-
-	return lexInitial
 }

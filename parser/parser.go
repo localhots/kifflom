@@ -9,58 +9,181 @@ import (
 )
 
 type (
-	ExpectationType int
-	Expectation     struct {
-		Type  ExpectationType
-		Key   string
-		Index int64
+	ContextType int
+	Context     struct {
+		Type ContextType
+		Key  string
 	}
 	Parser struct {
-		exps []Expectation
+		exps    []Context
+		context []Context
+		lex     *lexer.Lexer
 	}
 )
 
 const (
-	Object ExpectationType = iota
+	Unknown ContextType = iota
+	Object
 	Array
 )
 
-func New(selector string) *Parser {
-	return &Parser{
-		exps: parseSelector(selector),
+func New(b []byte, sel string) *Parser {
+	p := &Parser{
+		exps:    parseSelector(sel),
+		context: []Context{},
+		lex:     lexer.New(string(b)),
 	}
+
+	return p
 }
 
-func (p *Parser) Parse(b []byte) {
-	lex := lexer.New(string(b))
-	go lex.Run()
+func (p *Parser) Parse() {
+	go p.lex.Run()
+	p.parseValue(p.next())
+}
 
-	for {
-		if item, ok := lex.NextItem(); ok {
-			fmt.Println(item)
+func (p *Parser) parseValue(item lexer.Item) {
+	if item.Token == lexer.BraceOpen {
+		p.enterContext(Object)
+		p.parseObject()
+		p.leaveContext()
+		return
+	}
+	if item.Token == lexer.BracketOpen {
+		p.enterContext(Array)
+		p.parseArray(0)
+		p.leaveContext()
+		return
+	}
+
+	isMatch := p.checkContext()
+	switch item.Token {
+	case lexer.Null, lexer.Bool, lexer.Number, lexer.String:
+		if isMatch {
+			fmt.Printf("\n\nFOUND MATCH!\nVALUE: %s\n\n", item.String())
+			panic("Match found")
+		}
+	default:
+		if isMatch {
+			panic("Cannot print your match, sorry :(")
 		} else {
-			break
+			unexpected(item)
 		}
 	}
 }
 
-func parseSelector(sel string) []Expectation {
-	exps := []Expectation{}
+func (p *Parser) parseArray(i int) {
+	p.context[len(p.context)-1].Key = strconv.Itoa(i)
+	item := p.next()
+	if item.Token == lexer.BracketClose {
+		return
+	}
+
+	p.parseValue(item)
+
+	switch item := p.next(); item.Token {
+	case lexer.BracketClose:
+		return
+	case lexer.Comma:
+		p.parseArray(i + 1)
+	}
+}
+
+func (p *Parser) parseObject() {
+	item := p.next()
+	switch item.Token {
+	case lexer.BraceClose:
+		return
+	case lexer.String:
+		p.context[len(p.context)-1].Key = item.Val
+	default:
+		unexpected(item)
+	}
+
+	if item := p.next(); item.Token != lexer.Colon {
+		unexpected(item)
+	}
+
+	p.parseValue(p.next())
+
+	switch item := p.next(); item.Token {
+	case lexer.BraceClose:
+		return
+	case lexer.Comma:
+		p.parseObject()
+	default:
+		unexpected(item)
+	}
+}
+
+func (p *Parser) checkContext() bool {
+	depth := len(p.context)
+	if depth != len(p.exps) {
+		return false
+	}
+
+	fmt.Println("Checking...")
+	fmt.Println(p.exps)
+	fmt.Println(p.context)
+
+	for i, exp := range p.exps {
+		ctx := p.context[i]
+		if exp.Type != ctx.Type || exp.Key != ctx.Key {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (p *Parser) next() lexer.Item {
+	if item, ok := p.lex.NextItem(); ok {
+		fmt.Println(item)
+		return item
+	} else {
+		panic("EOF reached")
+	}
+}
+
+func (p *Parser) enterContext(typ ContextType) {
+	p.context = append(p.context, Context{
+		Type: typ,
+	})
+}
+
+func (p *Parser) leaveContext() {
+	p.context = p.context[:len(p.context)-1]
+}
+
+func unexpected(item lexer.Item) {
+	panic(fmt.Errorf("Unexpected token: %s", item.String()))
+}
+
+func parseSelector(sel string) []Context {
+	exps := []Context{}
 	parts := strings.Split(sel[1:], "/")
 	for _, part := range parts {
+		typ := Object
 		if len(part) > 2 && part[:1] == "[" && part[len(part)-1:] == "]" {
-			index, _ := strconv.ParseInt(part[1:len(part)-1], 10, 64)
-			exps = append(exps, Expectation{
-				Type:  Array,
-				Index: index,
-			})
-		} else {
-			exps = append(exps, Expectation{
-				Type: Object,
-				Key:  part,
-			})
+			part = part[1 : len(part)-1]
+			typ = Array
 		}
+		exps = append(exps, Context{
+			Type: typ,
+			Key:  part,
+		})
 	}
 
 	return exps
+}
+
+func (e ContextType) String() string {
+	switch e {
+	case Array:
+		return "Index"
+	case Object:
+		return "Key"
+	default:
+		return "Unknown"
+	}
 }

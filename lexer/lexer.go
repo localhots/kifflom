@@ -88,6 +88,11 @@ func (l *Lexer) next() rune {
 	return r
 }
 
+// Returns the value for the next token
+func (l *Lexer) val() string {
+	return l.input[l.start:l.pos]
+}
+
 // Returns but does not consume the next rune in the input
 func (l *Lexer) peek() rune {
 	r := l.next()
@@ -198,7 +203,7 @@ func lexNull(l *Lexer) stateFn {
 	if l.acceptString("null") {
 		l.emit(Null)
 	} else {
-		return l.errorf("Unexpected token")
+		return l.errorf("Unexpected (null) token: %q", l.val())
 	}
 	return lexInitial
 }
@@ -206,6 +211,8 @@ func lexNull(l *Lexer) stateFn {
 func lexBool(l *Lexer) stateFn {
 	if l.acceptString("true") || l.acceptString("false") {
 		l.emit(Bool)
+	} else {
+		return l.errorf("Unexpected (bool) token: %q", l.val())
 	}
 	return lexInitial
 }
@@ -225,7 +232,7 @@ func lexNumber(l *Lexer) stateFn {
 		default:
 			l.backup()
 			if numDots > 1 || last == '.' {
-				return l.errorf("Invalid number")
+				return l.errorf("Invalid number: %q", l.val())
 			}
 			l.emit(Number)
 			return lexInitial
@@ -263,12 +270,16 @@ func lexString(l *Lexer) stateFn {
 	}
 }
 
+//
+// Debug
+//
+
 func (i Item) String() string {
 	switch i.Token {
 	case EOF:
 		return "EOF"
 	case Error:
-		return "Error: " + i.Val
+		return fmt.Sprintf("(Error: %q)", i.Val)
 	case BraceOpen:
 		return "{"
 	case BraceClose:
@@ -284,13 +295,13 @@ func (i Item) String() string {
 	case Comma:
 		return ","
 	case Null:
-		return "NULL"
+		return fmt.Sprintf("(NULL: %q)", i.Val)
 	case Bool:
-		return "Bool: " + i.Val
+		return fmt.Sprintf("(Bool: %q)", i.Val)
 	case Number:
-		return "Number: " + i.Val
+		return fmt.Sprintf("(Number: %q)", i.Val)
 	case String:
-		return "String: " + i.Val
+		return fmt.Sprintf("(String: %q)", i.Val)
 	default:
 		panic("Unreachable")
 	}

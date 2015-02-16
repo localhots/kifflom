@@ -43,10 +43,10 @@ func TestNumber(t *testing.T) {
 		Item{EOF, "", 0},
 	})
 	compare(t, lex("123.456.789"), []Item{
-		Item{Error, "Invalid number", 0},
+		Item{Error, `Invalid number: "123.456.789"`, 0},
 	})
 	compare(t, lex("123."), []Item{
-		Item{Error, "Invalid number", 0},
+		Item{Error, `Invalid number: "123."`, 0},
 	})
 }
 

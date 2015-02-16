@@ -9,5 +9,8 @@
         {"length": 13, "weight": 5},
         {"length": 18, "weight": 8},
         {"length": 13, "weight": 4}
-    ]
+    ],
+    "misc": {
+        "string with quotes": "beware of \"quoted\" text"
+    }
 }

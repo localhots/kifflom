@@ -12,12 +12,12 @@ func main() {
 	f, _ := os.Open("test.json")
 	b, _ := ioutil.ReadAll(f)
 
-	lex := lexer.New("foo", string(b))
+	lex := lexer.New(string(b))
 	go lex.Run()
 	for {
-		i := lex.NextItem()
-		fmt.Println(i)
-		if i.String() == "EOF" {
+		if item, ok := lex.NextItem(); ok {
+			fmt.Println(item)
+		} else {
 			break
 		}
 	}

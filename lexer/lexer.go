@@ -257,6 +257,7 @@ func lexNumber(l *Lexer) stateFn {
 }
 
 func lexString(l *Lexer) stateFn {
+	l.ignore()
 	escaped := false
 	for {
 		switch r := l.next(); r {
@@ -266,7 +267,9 @@ func lexString(l *Lexer) stateFn {
 			if escaped {
 				escaped = false
 			} else {
+				l.backup() // Going before closing quote
 				l.emit(String)
+				l.next() // Skipping closing quote
 				return lexInitial
 			}
 		case '\n':

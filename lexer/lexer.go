@@ -75,6 +75,7 @@ func (l *Lexer) Run() {
 	for state := lexInitial; state != nil; {
 		state = state(l)
 	}
+	close(l.items)
 }
 
 // Returns the next scanned item and a boolean, which is false on EOF
@@ -151,9 +152,6 @@ func (l *Lexer) emit(t Token) {
 		Column: l.startCol,
 	}
 	l.ignore() // Cleaning up input
-	if t == EOF {
-		close(l.items)
-	}
 }
 
 // Emits an error token with given string as a value and stops lexing
@@ -165,7 +163,6 @@ func (l *Lexer) errorf(format string, args ...interface{}) stateFn {
 		Line:   l.startLine,
 		Column: l.startCol,
 	}
-	close(l.items)
 	return nil
 }
 

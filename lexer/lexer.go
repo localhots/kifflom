@@ -144,6 +144,10 @@ func (l *Lexer) ignore() {
 
 // Passes an item back to the client
 func (l *Lexer) emit(t Token) {
+	// Single-character tokens never backup
+	if len(l.val()) == 1 {
+		l.startCol++
+	}
 	l.items <- Item{
 		Token:  t,
 		Val:    l.val(),

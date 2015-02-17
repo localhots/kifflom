@@ -218,20 +218,15 @@ func lexBool(l *Lexer) stateFn {
 }
 
 func lexNumber(l *Lexer) stateFn {
-	var (
-		last    rune
-		numDots = 0
-	)
+	numDots := 0
 	for {
 		switch r := l.next(); r {
 		case '1', '2', '3', '4', '5', '6', '7', '8', '9', '0':
-			last = r
 		case '.':
 			numDots++
-			last = r
 		default:
 			l.backup()
-			if numDots > 1 || last == '.' {
+			if numDots > 1 || r == '.' {
 				return l.errorf("Invalid number: %q", l.val())
 			}
 			l.emit(Number)

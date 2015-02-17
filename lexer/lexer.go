@@ -24,9 +24,11 @@ type (
 
 	// Represents a token returned from the scanner
 	Item struct {
-		Token Token  // The type of this item
-		Val   string // The value of this item
-		Pos   int    // The starting position, in bytes, of this item in the input string
+		Token  Token  // The type of this item
+		Val    string // The value of this item
+		Pos    int    // The starting position, in bytes, of this item in the input string
+		Line   int    // Line number
+		Column int    // Column number
 	}
 
 	// Identifies the type of the item
@@ -86,6 +88,7 @@ func (l *Lexer) next() rune {
 		l.width = 0
 		return 0
 	}
+
 	r, w := utf8.DecodeRuneInString(l.input[l.pos:])
 	l.width = w
 	l.pos += l.width
@@ -123,23 +126,29 @@ func (l *Lexer) acceptString(s string) (ok bool) {
 }
 
 // Steps back one rune
+// Backup is never called right after a new line char so we don't care
+// about the line number. This is also true for the ignore function
 func (l *Lexer) backup() {
 	l.pos -= l.width
+	l.colNum--
 }
 
 // Skips over the pending input before this point
 func (l *Lexer) ignore() {
 	l.start = l.pos
+	l.startCol = l.colNum
 }
 
 // Passes an item back to the client
 func (l *Lexer) emit(t Token) {
 	l.items <- Item{
-		Token: t,
-		Val:   l.input[l.start:l.pos],
-		Pos:   l.start,
+		Token:  t,
+		Val:    l.input[l.start:l.pos],
+		Pos:    l.start,
+		Line:   l.lineNum,
+		Column: l.startCol,
 	}
-	l.start = l.pos
+	l.ignore() // Cleaning up input
 	if t == EOF {
 		close(l.items)
 	}
@@ -148,9 +157,11 @@ func (l *Lexer) emit(t Token) {
 // Emits an error token with given string as a value and stops lexing
 func (l *Lexer) errorf(format string, args ...interface{}) stateFn {
 	l.items <- Item{
-		Token: Error,
-		Val:   fmt.Sprintf(format, args...),
-		Pos:   l.start,
+		Token:  Error,
+		Val:    fmt.Sprintf(format, args...),
+		Pos:    l.start,
+		Line:   l.lineNum,
+		Column: l.startCol,
 	}
 	close(l.items)
 	return nil
@@ -266,34 +277,37 @@ func lexString(l *Lexer) stateFn {
 //
 
 func (i Item) String() string {
+	var label string
 	switch i.Token {
 	case EOF:
-		return "EOF"
+		label = "EOF"
 	case Error:
-		return fmt.Sprintf("(Error: %q)", i.Val)
+		label = fmt.Sprintf("(Error: %q)", i.Val)
 	case BraceOpen:
-		return "{"
+		label = "{"
 	case BraceClose:
-		return "}"
+		label = "}"
 	case BracketOpen:
-		return "["
+		label = "["
 	case BracketClose:
-		return "]"
+		label = "]"
 	case Quote:
-		return "\""
+		label = "\""
 	case Colon:
-		return ":"
+		label = ":"
 	case Comma:
-		return ","
+		label = ","
 	case Null:
-		return fmt.Sprintf("(NULL: %q)", i.Val)
+		label = fmt.Sprintf("(NULL: %q)", i.Val)
 	case Bool:
-		return fmt.Sprintf("(Bool: %q)", i.Val)
+		label = fmt.Sprintf("(Bool: %q)", i.Val)
 	case Number:
-		return fmt.Sprintf("(Number: %q)", i.Val)
+		label = fmt.Sprintf("(Number: %q)", i.Val)
 	case String:
-		return fmt.Sprintf("(String: %q)", i.Val)
+		label = fmt.Sprintf("(String: %q)", i.Val)
 	default:
 		panic("Unreachable")
 	}
+
+	return fmt.Sprintf("[%.3d:%.3d] %s", i.Line, i.Column, label)
 }

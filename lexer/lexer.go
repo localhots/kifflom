@@ -278,24 +278,12 @@ func lexString(l *Lexer) stateFn {
 func (i Item) String() string {
 	var label string
 	switch i.Token {
+	case BraceOpen, BraceClose, BracketOpen, BracketClose, Quote, Colon, Comma:
+		label = i.Val
 	case EOF:
 		label = "EOF"
 	case Error:
 		label = fmt.Sprintf("(Error: %q)", i.Val)
-	case BraceOpen:
-		label = "{"
-	case BraceClose:
-		label = "}"
-	case BracketOpen:
-		label = "["
-	case BracketClose:
-		label = "]"
-	case Quote:
-		label = "\""
-	case Colon:
-		label = ":"
-	case Comma:
-		label = ","
 	case Null:
 		label = fmt.Sprintf("(NULL: %q)", i.Val)
 	case Bool:

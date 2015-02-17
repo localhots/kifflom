@@ -9,71 +9,68 @@ import (
 )
 
 type (
-	ContextType int
-	Context     struct {
-		Type ContextType
-		Key  string
-	}
+	// Holds the state of parser
 	Parser struct {
-		exps    []Context
-		context []Context
-		lex     *lexer.Lexer
+		lex  *lexer.Lexer
+		ctx  *context
+		sels map[string]*context
+		res  map[string][]lexer.Item
 	}
 )
 
-const (
-	Unknown ContextType = iota
-	Object
-	Array
-)
-
-func New(b []byte, sel string) *Parser {
-	p := &Parser{
-		exps:    parseSelector(sel),
-		context: []Context{},
-		lex:     lexer.New(string(b)),
+// Creates a new parser
+func New(b []byte, sels []string) *Parser {
+	return &Parser{
+		lex: lexer.New(string(b)),
+		ctx: &context{
+			exps: []expectation{},
+		},
+		sels: parseSelectors(sels),
+		res:  map[string][]lexer.Item{},
 	}
-
-	return p
 }
 
-func (p *Parser) Parse() {
+// Starts parsing
+func (p *Parser) Parse() map[string][]interface{} {
 	go p.lex.Run()
 	p.parseValue(p.next())
+
+	out := map[string][]interface{}{}
+	for sel, res := range p.res {
+		for _, item := range res {
+			if val, err := castValue(item); err == nil {
+				out[sel] = append(out[sel], val)
+			} else {
+				out[sel] = append(out[sel], err)
+			}
+		}
+	}
+
+	return out
 }
 
 func (p *Parser) parseValue(item lexer.Item) {
-	if item.Token == lexer.BraceOpen {
-		p.enterContext(Object)
-		p.parseObject()
-		p.leaveContext()
-		return
-	}
-	if item.Token == lexer.BracketOpen {
-		p.enterContext(Array)
-		p.parseArray(0)
-		p.leaveContext()
-		return
-	}
-
-	isMatch := p.checkContext()
 	switch item.Token {
 	case lexer.Null, lexer.Bool, lexer.Number, lexer.String:
-		if isMatch {
-			fmt.Printf("\n\nFOUND MATCH!\nVALUE: %s\n\n", item.String())
-			panic("Match found")
-		}
+		p.pushValue(item)
+	case lexer.BraceOpen:
+		p.ctx.push(object)
+		p.parseObject()
+		p.ctx.pop()
+	case lexer.BracketOpen:
+		p.ctx.push(array)
+		p.parseArray(0)
+		p.ctx.pop()
 	default:
-		if isMatch {
-			panic("Cannot print your match, sorry :(")
-		} else {
-			unexpected(item)
-		}
+		unexpected(item)
 	}
 }
 
-func (p *Parser) parseArray(i int) {
-	p.context[len(p.context)-1].Key = strconv.Itoa(i)
+// Parses array recursively part by part
+// Is called after '[' and ',' tokens
+// Expects a value followed by ']' or ',' tokens
+func (p *Parser) parseArray(i int64) {
+	p.ctx.setIndex(i)
 	item := p.next()
 	if item.Token == lexer.BracketClose {
 		return
@@ -95,7 +92,7 @@ func (p *Parser) parseObject() {
 	case lexer.BraceClose:
 		return
 	case lexer.String:
-		p.context[len(p.context)-1].Key = item.Val
+		p.ctx.setKey(item.Val)
 	default:
 		unexpected(item)
 	}
@@ -116,24 +113,13 @@ func (p *Parser) parseObject() {
 	}
 }
 
-func (p *Parser) checkContext() bool {
-	depth := len(p.context)
-	if depth != len(p.exps) {
-		return false
-	}
-
-	fmt.Println("Checking...")
-	fmt.Println(p.exps)
-	fmt.Println(p.context)
-
-	for i, exp := range p.exps {
-		ctx := p.context[i]
-		if exp.Type != ctx.Type || exp.Key != ctx.Key {
-			return false
+func (p *Parser) pushValue(item lexer.Item) {
+	for sel, exp := range p.sels {
+		if ok := exp.compare(p.ctx); ok {
+			p.res[sel] = append(p.res[sel], item)
+			return
 		}
 	}
-
-	return true
 }
 
 func (p *Parser) next() lexer.Item {
@@ -145,45 +131,24 @@ func (p *Parser) next() lexer.Item {
 	}
 }
 
-func (p *Parser) enterContext(typ ContextType) {
-	p.context = append(p.context, Context{
-		Type: typ,
-	})
-}
-
-func (p *Parser) leaveContext() {
-	p.context = p.context[:len(p.context)-1]
+func castValue(item lexer.Item) (val interface{}, err error) {
+	switch item.Token {
+	case lexer.Null:
+		val = nil
+	case lexer.Bool:
+		val = (item.Val == "true")
+	case lexer.String:
+		val = item.Val
+	case lexer.Number:
+		if strings.Index(item.Val, ".") > -1 {
+			val, err = strconv.ParseFloat(item.Val, 64)
+		} else {
+			val, err = strconv.ParseInt(item.Val, 10, 64)
+		}
+	}
+	return
 }
 
 func unexpected(item lexer.Item) {
 	panic(fmt.Errorf("Unexpected token: %s", item.String()))
-}
-
-func parseSelector(sel string) []Context {
-	exps := []Context{}
-	parts := strings.Split(sel[1:], "/")
-	for _, part := range parts {
-		typ := Object
-		if len(part) > 2 && part[:1] == "[" && part[len(part)-1:] == "]" {
-			part = part[1 : len(part)-1]
-			typ = Array
-		}
-		exps = append(exps, Context{
-			Type: typ,
-			Key:  part,
-		})
-	}
-
-	return exps
-}
-
-func (e ContextType) String() string {
-	switch e {
-	case Array:
-		return "Index"
-	case Object:
-		return "Key"
-	default:
-		return "Unknown"
-	}
 }

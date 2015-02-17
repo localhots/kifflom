@@ -12,7 +12,11 @@ func main() {
 	f, _ := os.Open("test.json")
 	b, _ := ioutil.ReadAll(f)
 
-	p := parser.New(b, []string{"/bananas/[*]/weight"})
+	p := parser.New(b, []string{
+		"/prices/pomelo",
+		"/prices/peach",
+		"/bananas/[*]/weight",
+	})
 	res := p.Parse()
 	pretty.Println(res)
 }

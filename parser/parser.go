@@ -70,12 +70,15 @@ func (p *Parser) parseValue(item lexer.Item) {
 // Is called after '[' and ',' tokens
 // Expects a value followed by ']' or ',' tokens
 func (p *Parser) parseArray(i int64) {
-	p.ctx.setIndex(i)
 	item := p.next()
 	if item.Token == lexer.BracketClose {
+		// Neither a bug nor a feature
+		// This allows an array to have a trailing comma
+		// [1, 2, 3, ]
 		return
 	}
 
+	p.ctx.setIndex(i)
 	p.parseValue(item)
 
 	switch item := p.next(); item.Token {
@@ -90,6 +93,9 @@ func (p *Parser) parseObject() {
 	item := p.next()
 	switch item.Token {
 	case lexer.BraceClose:
+		// Neither a bug nor a feature
+		// This allows an object to have a trailing comma
+		// {"foo": 1, "bar": 2, }
 		return
 	case lexer.String:
 		p.ctx.setKey(item.Val)

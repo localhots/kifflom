@@ -12,12 +12,14 @@ import (
 type (
 	// Holds the state of the scanner
 	Lexer struct {
-		input   string    // The string being scanned
-		lineNum int       // Line number
-		pos     int       // Current position in the input
-		start   int       // Start position of this item
-		width   int       // Width of last rune read from input
-		items   chan Item // Channel of scanned items
+		input    string    // The string being scanned
+		lineNum  int       // Line number
+		colNum   int       // Column number
+		pos      int       // Current position in the input
+		start    int       // Start position of this item
+		startCol int       // Start column of this item
+		width    int       // Width of last rune read from input
+		items    chan Item // Channel of scanned items
 	}
 
 	// Represents a token returned from the scanner
@@ -58,8 +60,10 @@ const (
 // Creates a new scanner for the input string
 func New(input string) *Lexer {
 	return &Lexer{
-		input: input,
-		items: make(chan Item),
+		input:   input,
+		items:   make(chan Item),
+		lineNum: 1,
+		colNum:  0,
 	}
 }
 
@@ -85,6 +89,15 @@ func (l *Lexer) next() rune {
 	r, w := utf8.DecodeRuneInString(l.input[l.pos:])
 	l.width = w
 	l.pos += l.width
+
+	// Counting lines and columns - token coordinates
+	if r == '\n' {
+		l.lineNum++
+		l.colNum = 0
+	} else {
+		l.colNum++
+	}
+
 	return r
 }
 
@@ -150,10 +163,7 @@ func (l *Lexer) errorf(format string, args ...interface{}) stateFn {
 func lexInitial(l *Lexer) stateFn {
 	for {
 		switch r := l.next(); r {
-		case ' ', '\t':
-			return lexSpace(l)
-		case '\n':
-			l.lineNum++
+		case ' ', '\t', '\n':
 			l.ignore()
 		case 'n':
 			l.backup()
@@ -185,18 +195,6 @@ func lexInitial(l *Lexer) stateFn {
 			return l.errorf("Unexpected symbol: %c", r)
 		}
 	}
-}
-
-// Skips all spaces in the input until a visible character is found
-func lexSpace(l *Lexer) stateFn {
-	for {
-		if r := l.next(); r != ' ' && r != '\t' {
-			l.backup()
-			break
-		}
-	}
-	l.ignore()
-	return lexInitial
 }
 
 func lexNull(l *Lexer) stateFn {
@@ -255,8 +253,6 @@ func lexString(l *Lexer) stateFn {
 				l.ignore()
 				return lexInitial
 			}
-		case '\n':
-			l.lineNum++
 		case 0:
 			return l.errorf("Unterminated string")
 		default:

@@ -130,6 +130,10 @@ func (p *Parser) pushValue(item lexer.Item) {
 
 func (p *Parser) next() lexer.Item {
 	if item, ok := p.lex.NextItem(); ok {
+		if item.Token == lexer.Error {
+			panic(item)
+		}
+
 		fmt.Println(item)
 		return item
 	} else {

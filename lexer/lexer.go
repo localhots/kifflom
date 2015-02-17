@@ -12,14 +12,15 @@ import (
 type (
 	// Holds the state of the scanner
 	Lexer struct {
-		input    string    // The string being scanned
-		lineNum  int       // Line number
-		colNum   int       // Column number
-		pos      int       // Current position in the input
-		start    int       // Start position of this item
-		startCol int       // Start column of this item
-		width    int       // Width of last rune read from input
-		items    chan Item // Channel of scanned items
+		input     string    // The string being scanned
+		lineNum   int       // Line number
+		colNum    int       // Column number
+		pos       int       // Current position in the input
+		start     int       // Start position of this item
+		startLine int       // Start line of this item
+		startCol  int       // Start column of this item
+		width     int       // Width of last rune read from input
+		items     chan Item // Channel of scanned items
 	}
 
 	// Represents a token returned from the scanner
@@ -136,6 +137,7 @@ func (l *Lexer) backup() {
 // Skips over the pending input before this point
 func (l *Lexer) ignore() {
 	l.start = l.pos
+	l.startLine = l.lineNum
 	l.startCol = l.colNum
 }
 
@@ -143,9 +145,9 @@ func (l *Lexer) ignore() {
 func (l *Lexer) emit(t Token) {
 	l.items <- Item{
 		Token:  t,
-		Val:    l.input[l.start:l.pos],
+		Val:    l.val(),
 		Pos:    l.start,
-		Line:   l.lineNum,
+		Line:   l.startLine,
 		Column: l.startCol,
 	}
 	l.ignore() // Cleaning up input
@@ -160,7 +162,7 @@ func (l *Lexer) errorf(format string, args ...interface{}) stateFn {
 		Token:  Error,
 		Val:    fmt.Sprintf(format, args...),
 		Pos:    l.start,
-		Line:   l.lineNum,
+		Line:   l.startLine,
 		Column: l.startCol,
 	}
 	close(l.items)

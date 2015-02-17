@@ -12,9 +12,10 @@ type (
 
 	// Context building block
 	expectation struct {
-		typ   expectationType
-		key   string // Object key
-		index int64  // Array index
+		typ    expectationType
+		greedy bool
+		key    string // Object key
+		index  int64  // Array index
 	}
 
 	// Type of expectation: object or array
@@ -37,9 +38,12 @@ func (c *context) compare(c2 *context) bool {
 		if exp.typ != exp2.typ {
 			return false
 		}
+		if exp.greedy || exp2.greedy {
+			continue
+		}
 		switch exp.typ {
 		case array:
-			if exp.index != -1 && exp2.index != -1 && exp.index != exp2.index {
+			if exp.index != exp2.index {
 				return false
 			}
 		case object:
@@ -92,7 +96,7 @@ func parseSelector(sel string) []expectation {
 			c.typ = array
 			part = part[1 : len(part)-1]
 			if part == "*" {
-				c.index = -1
+				c.greedy = true
 			} else if i, err := strconv.ParseInt(part, 10, 64); err == nil {
 				c.index = i
 			} else {
@@ -100,7 +104,11 @@ func parseSelector(sel string) []expectation {
 			}
 		} else {
 			c.typ = object
-			c.key = part
+			if part == "*" {
+				c.greedy = true
+			} else {
+				c.key = part
+			}
 		}
 		exps = append(exps, c)
 	}

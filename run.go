@@ -13,8 +13,7 @@ func main() {
 	b, _ := ioutil.ReadAll(f)
 
 	p := parser.New(b, []string{
-		"/prices/pomelo",
-		"/prices/peach",
+		"/prices/*",
 		"/bananas/[*]/weight",
 	})
 	res := p.Parse()

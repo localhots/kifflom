@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/localhots/punk/buffer"
 	"github.com/localhots/punk/lexer"
 )
 
@@ -20,8 +21,9 @@ type (
 
 // Creates a new parser
 func New(b []byte, sels []string) *Parser {
+	buf := buffer.NewDataBuffer(b)
 	return &Parser{
-		lex: lexer.New(string(b)),
+		lex: lexer.New(buf),
 		ctx: &context{
 			exps: []expectation{},
 		},

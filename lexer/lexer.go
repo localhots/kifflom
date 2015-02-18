@@ -5,21 +5,20 @@ package lexer
 
 import (
 	"fmt"
-	"strings"
-	"unicode/utf8"
+
+	"github.com/localhots/punk/buffer"
 )
 
 type (
 	// Holds the state of the scanner
 	Lexer struct {
-		input     string    // The string being scanned
+		input     buffer.Bufferer
+		stack     []rune
+		pos       int
 		lineNum   int       // Line number
 		colNum    int       // Column number
-		pos       int       // Current position in the input
-		start     int       // Start position of this item
 		startLine int       // Start line of this item
 		startCol  int       // Start column of this item
-		width     int       // Width of last rune read from input
 		items     chan Item // Channel of scanned items
 	}
 
@@ -27,7 +26,6 @@ type (
 	Item struct {
 		Token  Token  // The type of this item
 		Val    string // The value of this item
-		Pos    int    // The starting position, in bytes, of this item in the input string
 		Line   int    // Line number
 		Column int    // Column number
 	}
@@ -61,7 +59,7 @@ const (
 )
 
 // Creates a new scanner for the input string
-func New(input string) *Lexer {
+func New(input buffer.Bufferer) *Lexer {
 	return &Lexer{
 		input:   input,
 		items:   make(chan Item),
@@ -86,14 +84,12 @@ func (l *Lexer) NextItem() (item Item, ok bool) {
 
 // Returns the next rune in the input
 func (l *Lexer) next() rune {
-	if l.pos >= len(l.input) {
-		l.width = 0
-		return 0
+	var r rune
+	if l.pos > len(l.stack)-1 {
+		l.stack = append(l.stack, l.input.Next())
 	}
-
-	r, w := utf8.DecodeRuneInString(l.input[l.pos:])
-	l.width = w
-	l.pos += l.width
+	r = l.stack[l.pos]
+	l.pos++
 
 	// Counting lines and columns - token coordinates
 	if r == '\n' {
@@ -108,36 +104,43 @@ func (l *Lexer) next() rune {
 
 // Returns the value for the next token
 func (l *Lexer) val() string {
-	return l.input[l.start:l.pos]
+	return string(l.stack[:l.pos])
 }
 
 // Returns but does not consume the next rune in the input
 func (l *Lexer) peek() rune {
 	r := l.next()
-	l.backup()
+	l.backup(1)
 	return r
 }
 
 // Tells if the following input matches the given string
 func (l *Lexer) acceptString(s string) (ok bool) {
-	if strings.HasPrefix(l.input[l.pos:], s) {
-		l.pos += len(s)
-		return true
+	for i, c := range s {
+		if l.next() != c {
+			l.backup(i + 1)
+			return false
+		}
 	}
-	return false
+	return true
 }
 
 // Steps back one rune
 // Backup is never called right after a new line char so we don't care
 // about the line number. This is also true for the ignore function
-func (l *Lexer) backup() {
-	l.pos -= l.width
-	l.colNum--
+func (l *Lexer) backup(n int) {
+	l.pos -= n
+	l.colNum -= n
 }
 
 // Skips over the pending input before this point
 func (l *Lexer) ignore() {
-	l.start = l.pos
+	if l.pos < len(l.stack) {
+		l.stack = l.stack[l.pos:]
+	} else {
+		l.stack = []rune{}
+	}
+	l.pos = 0
 	l.startLine = l.lineNum
 	l.startCol = l.colNum
 }
@@ -151,7 +154,6 @@ func (l *Lexer) emit(t Token) {
 	l.items <- Item{
 		Token:  t,
 		Val:    l.val(),
-		Pos:    l.start,
 		Line:   l.startLine,
 		Column: l.startCol,
 	}
@@ -163,7 +165,6 @@ func (l *Lexer) errorf(format string, args ...interface{}) stateFn {
 	l.items <- Item{
 		Token:  Error,
 		Val:    fmt.Sprintf(format, args...),
-		Pos:    l.start,
 		Line:   l.startLine,
 		Column: l.startCol,
 	}
@@ -180,13 +181,13 @@ func lexInitial(l *Lexer) stateFn {
 		case ' ', '\t', '\n':
 			l.ignore()
 		case 'n':
-			l.backup()
+			l.backup(1)
 			return lexNull(l)
 		case 't', 'f':
-			l.backup()
+			l.backup(1)
 			return lexBool(l)
 		case '1', '2', '3', '4', '5', '6', '7', '8', '9', '0':
-			l.backup()
+			l.backup(1)
 			return lexNumber(l)
 		case '"':
 			return lexString(l)
@@ -237,7 +238,7 @@ func lexNumber(l *Lexer) stateFn {
 		case '.':
 			numDots++
 		default:
-			l.backup()
+			l.backup(1)
 			if numDots > 1 || r == '.' {
 				return l.errorf("Invalid number: %q", l.val())
 			}
@@ -260,7 +261,7 @@ func lexString(l *Lexer) stateFn {
 				escaped = false
 			} else {
 				// Going before closing quote and emitting
-				l.backup()
+				l.backup(1)
 				l.emit(String)
 				// Skipping closing quote
 				l.next()

@@ -208,7 +208,7 @@ func lexInitial(l *Lexer) stateFn {
 			l.emit(EOF)
 			return nil
 		default:
-			return l.errorf("Unexpected symbol: %c", r)
+			return l.errorf("Unexpected symbol: %q", r)
 		}
 	}
 }
@@ -217,7 +217,7 @@ func lexNull(l *Lexer) stateFn {
 	if l.acceptString("null") {
 		l.emit(Null)
 	} else {
-		return l.errorf("Unexpected (null) token: %q", l.val())
+		return l.errorf("Unexpected (null) symbol: %q", l.val())
 	}
 	return lexInitial
 }
@@ -226,7 +226,7 @@ func lexBool(l *Lexer) stateFn {
 	if l.acceptString("true") || l.acceptString("false") {
 		l.emit(Bool)
 	} else {
-		return l.errorf("Unexpected (bool) token: %q", l.val())
+		return l.errorf("Unexpected (bool) symbol: %q", l.val())
 	}
 	return lexInitial
 }
@@ -289,7 +289,7 @@ func (i Item) String() string {
 	case EOF:
 		label = "EOF"
 	case Error:
-		label = fmt.Sprintf("(Error: %q)", i.Val)
+		label = fmt.Sprintf("(Error: %s)", i.Val)
 	case Null:
 		label = fmt.Sprintf("(NULL: %q)", i.Val)
 	case Bool:

@@ -13,8 +13,8 @@ type (
 	// Holds the state of the scanner
 	Lexer struct {
 		input     buffer.Bufferer
-		stack     []rune
-		pos       int
+		stack     []rune    // Lexer stack
+		pos       int       // Current stack position
 		lineNum   int       // Line number
 		colNum    int       // Column number
 		startLine int       // Start line of this item
@@ -58,7 +58,7 @@ const (
 	String
 )
 
-// Creates a new scanner for the input string
+// Creates a new scanner for the input buffer
 func New(input buffer.Bufferer) *Lexer {
 	return &Lexer{
 		input:   input,
@@ -82,9 +82,10 @@ func (l *Lexer) NextItem() (item Item, ok bool) {
 	return
 }
 
-// Returns the next rune in the input
+// Returns the next rune in the stack
 func (l *Lexer) next() rune {
 	var r rune
+	// Reading next rune from buffer
 	if l.pos > len(l.stack)-1 {
 		l.stack = append(l.stack, l.input.Next())
 	}
@@ -107,14 +108,14 @@ func (l *Lexer) val() string {
 	return string(l.stack[:l.pos])
 }
 
-// Returns but does not consume the next rune in the input
+// Returns but does not consume the next rune in the stack
 func (l *Lexer) peek() rune {
 	r := l.next()
 	l.backup(1)
 	return r
 }
 
-// Tells if the following input matches the given string
+// Tells if the following stack matches the given string
 func (l *Lexer) acceptString(s string) (ok bool) {
 	for i, c := range s {
 		if l.next() != c {
@@ -133,7 +134,7 @@ func (l *Lexer) backup(n int) {
 	l.colNum -= n
 }
 
-// Skips over the pending input before this point
+// Clears the stack items preceding the current position
 func (l *Lexer) ignore() {
 	if l.pos < len(l.stack) {
 		l.stack = l.stack[l.pos:]
@@ -157,7 +158,7 @@ func (l *Lexer) emit(t Token) {
 		Line:   l.startLine,
 		Column: l.startCol,
 	}
-	l.ignore() // Cleaning up input
+	l.ignore() // Cleaning up stack
 }
 
 // Emits an error token with given string as a value and stops lexing

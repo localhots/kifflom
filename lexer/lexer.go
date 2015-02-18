@@ -33,7 +33,7 @@ type (
 	}
 
 	// Identifies the type of the item
-	Token int
+	Token byte
 
 	// Represents the state of the scanner as a function that returns the next state
 	stateFn func(*Lexer) stateFn
@@ -86,7 +86,7 @@ func (l *Lexer) NextItem() (item Item, ok bool) {
 
 // Returns the next rune in the input
 func (l *Lexer) next() rune {
-	if int(l.pos) >= len(l.input) {
+	if l.pos >= len(l.input) {
 		l.width = 0
 		return 0
 	}

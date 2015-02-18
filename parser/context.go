@@ -19,7 +19,7 @@ type (
 	}
 
 	// Type of expectation: object or array
-	expectationType int
+	expectationType byte
 )
 
 const (

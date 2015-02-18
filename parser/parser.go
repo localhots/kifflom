@@ -12,10 +12,11 @@ import (
 type (
 	// Holds the state of parser
 	Parser struct {
-		lex  *lexer.Lexer
-		ctx  *context
-		sels map[string]*context
-		res  chan Match
+		lex     *lexer.Lexer
+		ctx     *context
+		sels    map[string]*context
+		res     chan Match
+		verbose bool
 	}
 	Match struct {
 		Sel string
@@ -33,6 +34,10 @@ func New(buf buffer.Bufferer, sels []string) *Parser {
 		sels: parseSelectors(sels),
 		res:  make(chan Match),
 	}
+}
+
+func (p *Parser) Debug() {
+	p.verbose = true
 }
 
 // Parse all and return matches
@@ -166,7 +171,9 @@ func (p *Parser) next() lexer.Item {
 			panic(item)
 		}
 
-		fmt.Println(item)
+		if p.verbose {
+			fmt.Println(item)
+		}
 		return item
 	} else {
 		panic("EOF reached")

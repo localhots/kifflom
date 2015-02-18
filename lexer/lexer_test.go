@@ -9,77 +9,77 @@ import (
 
 func TestEmpty(t *testing.T) {
 	compare(t, lex(""), []Item{
-		Item{EOF, "\x00", 0, 0},
+		{EOF, "\x00", 0, 0},
 	})
 }
 
 func TestNull(t *testing.T) {
 	compare(t, lex("null"), []Item{
-		Item{Null, "null", 0, 0},
-		Item{EOF, "\x00", 0, 0},
+		{Null, "null", 0, 0},
+		{EOF, "\x00", 0, 0},
 	})
 }
 
 func TesBool(t *testing.T) {
 	compare(t, lex("true"), []Item{
-		Item{Bool, "true", 0, 0},
-		Item{EOF, "\x00", 0, 0},
+		{Bool, "true", 0, 0},
+		{EOF, "\x00", 0, 0},
 	})
 	compare(t, lex("false"), []Item{
-		Item{Bool, "false", 0, 0},
-		Item{EOF, "\x00", 0, 0},
+		{Bool, "false", 0, 0},
+		{EOF, "\x00", 0, 0},
 	})
 }
 
 func TestString(t *testing.T) {
 	compare(t, lex(`"foo"`), []Item{
-		Item{String, "foo", 0, 0},
-		Item{EOF, "\x00", 0, 0},
+		{String, "foo", 0, 0},
+		{EOF, "\x00", 0, 0},
 	})
 }
 
 func TestNumber(t *testing.T) {
 	compare(t, lex("123"), []Item{
-		Item{Number, "123", 0, 0},
-		Item{EOF, "\x00", 0, 0},
+		{Number, "123", 0, 0},
+		{EOF, "\x00", 0, 0},
 	})
 	compare(t, lex("123.456"), []Item{
-		Item{Number, "123.456", 0, 0},
-		Item{EOF, "\x00", 0, 0},
+		{Number, "123.456", 0, 0},
+		{EOF, "\x00", 0, 0},
 	})
 	compare(t, lex("123.456.789"), []Item{
-		Item{Error, `Invalid number: "123.456.789"`, 0, 0},
+		{Error, `Invalid number: "123.456.789"`, 0, 0},
 	})
 	compare(t, lex("123."), []Item{
-		Item{Error, `Invalid number: "123."`, 0, 0},
+		{Error, `Invalid number: "123."`, 0, 0},
 	})
 }
 
 func TestArray(t *testing.T) {
 	compare(t, lex(`[1, "2", 3]`), []Item{
-		Item{BracketOpen, "[", 0, 0},
-		Item{Number, "1", 0, 0},
-		Item{Comma, ",", 0, 0},
-		Item{String, "2", 0, 0},
-		Item{Comma, ",", 0, 0},
-		Item{Number, "3", 0, 0},
-		Item{BracketClose, "]", 0, 0},
-		Item{EOF, "\x00", 0, 0},
+		{BracketOpen, "[", 0, 0},
+		{Number, "1", 0, 0},
+		{Comma, ",", 0, 0},
+		{String, "2", 0, 0},
+		{Comma, ",", 0, 0},
+		{Number, "3", 0, 0},
+		{BracketClose, "]", 0, 0},
+		{EOF, "\x00", 0, 0},
 	})
 }
 
 func TestObject(t *testing.T) {
 	compare(t, lex(`{"a": 1, "b": 2}`), []Item{
-		Item{BraceOpen, "{", 0, 0},
-		Item{String, "a", 0, 0},
-		Item{Colon, ":", 0, 0},
-		Item{Number, "1", 0, 0},
-		Item{Comma, ",", 0, 0},
-		Item{String, "b", 0, 0},
-		Item{Colon, ":", 0, 0},
-		Item{Number, "2", 0, 0},
-		Item{BraceClose, "}", 0, 0},
-		Item{EOF, "\x00", 0, 0},
+		{BraceOpen, "{", 0, 0},
+		{String, "a", 0, 0},
+		{Colon, ":", 0, 0},
+		{Number, "1", 0, 0},
+		{Comma, ",", 0, 0},
+		{String, "b", 0, 0},
+		{Colon, ":", 0, 0},
+		{Number, "2", 0, 0},
+		{BraceClose, "}", 0, 0},
+		{EOF, "\x00", 0, 0},
 	})
 }
 
@@ -97,39 +97,39 @@ func TestEverything(t *testing.T) {
 }
 `
 	compare(t, lex(input), []Item{
-		Item{BraceOpen, "{", 0, 0},
-		Item{String, "foo", 0, 0},
-		Item{Colon, ":", 0, 0},
-		Item{Bool, "true", 0, 0},
-		Item{Comma, ",", 0, 0},
-		Item{String, "bar", 0, 0},
-		Item{Colon, ":", 0, 0},
-		Item{Bool, "false", 0, 0},
-		Item{Comma, ",", 0, 0},
-		Item{String, "zilch", 0, 0},
-		Item{Colon, ":", 0, 0},
-		Item{Null, "null", 0, 0},
-		Item{Comma, ",", 0, 0},
-		Item{String, "numbers", 0, 0},
-		Item{Colon, ":", 0, 0},
-		Item{BracketOpen, "[", 0, 0},
-		Item{Number, "1", 0, 0},
-		Item{Comma, ",", 0, 0},
-		Item{Number, "23", 0, 0},
-		Item{Comma, ",", 0, 0},
-		Item{Number, "4.56", 0, 0},
-		Item{Comma, ",", 0, 0},
-		Item{Number, "7.89", 0, 0},
-		Item{BracketClose, "]", 0, 0},
-		Item{Comma, ",", 0, 0},
-		Item{String, "bullshit", 0, 0},
-		Item{Colon, ":", 0, 0},
-		Item{BraceOpen, "{", 0, 0},
-		Item{String, "nothing", 0, 0},
-		Item{Colon, ":", 0, 0},
-		Item{String, "anything", 0, 0},
-		Item{BraceClose, "}", 0, 0},
-		Item{Error, "Unexpected symbol: '!'", 0, 0},
+		{BraceOpen, "{", 0, 0},
+		{String, "foo", 0, 0},
+		{Colon, ":", 0, 0},
+		{Bool, "true", 0, 0},
+		{Comma, ",", 0, 0},
+		{String, "bar", 0, 0},
+		{Colon, ":", 0, 0},
+		{Bool, "false", 0, 0},
+		{Comma, ",", 0, 0},
+		{String, "zilch", 0, 0},
+		{Colon, ":", 0, 0},
+		{Null, "null", 0, 0},
+		{Comma, ",", 0, 0},
+		{String, "numbers", 0, 0},
+		{Colon, ":", 0, 0},
+		{BracketOpen, "[", 0, 0},
+		{Number, "1", 0, 0},
+		{Comma, ",", 0, 0},
+		{Number, "23", 0, 0},
+		{Comma, ",", 0, 0},
+		{Number, "4.56", 0, 0},
+		{Comma, ",", 0, 0},
+		{Number, "7.89", 0, 0},
+		{BracketClose, "]", 0, 0},
+		{Comma, ",", 0, 0},
+		{String, "bullshit", 0, 0},
+		{Colon, ":", 0, 0},
+		{BraceOpen, "{", 0, 0},
+		{String, "nothing", 0, 0},
+		{Colon, ":", 0, 0},
+		{String, "anything", 0, 0},
+		{BraceClose, "}", 0, 0},
+		{Error, "Unexpected symbol: '!'", 0, 0},
 	})
 }
 

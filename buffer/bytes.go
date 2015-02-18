@@ -6,21 +6,21 @@ import (
 )
 
 type (
-	DataBuffer struct {
+	BytesBuffer struct {
 		input []byte
 		size  uint64
 		pos   uint64
 	}
 )
 
-func NewDataBuffer(input []byte) *DataBuffer {
-	return &DataBuffer{
+func NewBytesBuffer(input []byte) *BytesBuffer {
+	return &BytesBuffer{
 		input: input,
 		size:  uint64(len(input)),
 	}
 }
 
-func (b *DataBuffer) Next() rune {
+func (b *BytesBuffer) Next() rune {
 	var buf bytes.Buffer
 	for b.pos < b.size-1 {
 		buf.WriteByte(b.input[b.pos])

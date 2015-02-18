@@ -15,7 +15,11 @@ type (
 		lex  *lexer.Lexer
 		ctx  *context
 		sels map[string]*context
-		res  map[string][]lexer.Item
+		res  chan Match
+	}
+	Match struct {
+		Sel string
+		Val interface{}
 	}
 )
 
@@ -27,27 +31,43 @@ func New(buf buffer.Bufferer, sels []string) *Parser {
 			exps: []expectation{},
 		},
 		sels: parseSelectors(sels),
-		res:  map[string][]lexer.Item{},
+		res:  make(chan Match),
 	}
 }
 
 // Starts parsing
 func (p *Parser) Parse() map[string][]interface{} {
-	go p.lex.Run()
-	p.parseValue(p.next())
-
+	p.ParseStream()
 	out := map[string][]interface{}{}
-	for sel, res := range p.res {
-		for _, item := range res {
-			if val, err := castValue(item); err == nil {
-				out[sel] = append(out[sel], val)
-			} else {
-				out[sel] = append(out[sel], err)
-			}
+	for {
+		if m, ok := <-p.res; ok {
+			out[m.Sel] = append(out[m.Sel], m.Val)
+		} else {
+			break
 		}
 	}
-
 	return out
+}
+
+func (p *Parser) ParseStream() <-chan Match {
+	go p.lex.Run()
+	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				fmt.Println("\nParse error! Yay!")
+				fmt.Println(err)
+			}
+			close(p.res)
+		}()
+		for {
+			if item := p.next(); item.Token != lexer.EOF {
+				p.parseValue(item)
+			} else {
+				break
+			}
+		}
+	}()
+	return p.res
 }
 
 func (p *Parser) parseValue(item lexer.Item) {
@@ -123,7 +143,17 @@ func (p *Parser) parseObject() {
 func (p *Parser) pushValue(item lexer.Item) {
 	for sel, exp := range p.sels {
 		if ok := exp.compare(p.ctx); ok {
-			p.res[sel] = append(p.res[sel], item)
+			if val, err := castValue(item); err == nil {
+				p.res <- Match{
+					Sel: sel,
+					Val: val,
+				}
+			} else {
+				p.res <- Match{
+					Sel: sel,
+					Val: err,
+				}
+			}
 			return
 		}
 	}

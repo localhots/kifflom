@@ -20,8 +20,7 @@ type (
 )
 
 // Creates a new parser
-func New(b []byte, sels []string) *Parser {
-	buf := buffer.NewDataBuffer(b)
+func New(buf buffer.Bufferer, sels []string) *Parser {
 	return &Parser{
 		lex: lexer.New(buf),
 		ctx: &context{

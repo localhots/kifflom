@@ -35,7 +35,7 @@ func New(buf buffer.Bufferer, sels []string) *Parser {
 	}
 }
 
-// Starts parsing
+// Parse all and return matches
 func (p *Parser) Parse() map[string][]interface{} {
 	p.ParseStream()
 	out := map[string][]interface{}{}
@@ -49,6 +49,7 @@ func (p *Parser) Parse() map[string][]interface{} {
 	return out
 }
 
+// Starts parsing
 func (p *Parser) ParseStream() <-chan Match {
 	go p.lex.Run()
 	go func() {

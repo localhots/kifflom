@@ -22,7 +22,7 @@ func NewBytesBuffer(input []byte) *BytesBuffer {
 
 func (b *BytesBuffer) Next() rune {
 	var buf bytes.Buffer
-	for b.pos < b.size-1 {
+	for b.pos < b.size {
 		buf.WriteByte(b.input[b.pos])
 		b.pos++
 		if ok := utf8.FullRune(buf.Bytes()); ok {

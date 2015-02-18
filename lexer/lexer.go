@@ -232,20 +232,25 @@ func lexBool(l *Lexer) stateFn {
 }
 
 func lexNumber(l *Lexer) stateFn {
-	numDots := 0
+	var (
+		numDots = 0
+		prev    rune
+		cur     rune
+	)
 	for {
-		switch r := l.next(); r {
+		switch cur = l.next(); cur {
 		case '1', '2', '3', '4', '5', '6', '7', '8', '9', '0':
 		case '.':
 			numDots++
 		default:
 			l.backup(1)
-			if numDots > 1 || r == '.' {
+			if numDots > 1 || prev == '.' {
 				return l.errorf("Invalid number: %q", l.val())
 			}
 			l.emit(Number)
 			return lexInitial
 		}
+		prev = cur
 	}
 }
 

@@ -39,12 +39,12 @@ func (b *Buffer) Next() rune {
 }
 
 func (b *Buffer) stream() {
+	defer close(b.ready)
 	for {
-		if r, _, err := b.input.ReadRune(); err != nil {
-			close(b.ready)
-			break
-		} else {
+		if r, _, err := b.input.ReadRune(); err == nil {
 			b.ready <- r
+		} else {
+			return
 		}
 	}
 }

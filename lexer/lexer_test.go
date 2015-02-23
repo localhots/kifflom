@@ -152,8 +152,8 @@ func compare(t *testing.T, reality, expectations []Item) {
 	}
 }
 
-func lex(json string) []Item {
-	buf := buffer.NewBytesBuffer([]byte(json))
+func lex(jstr string) []Item {
+	buf := buffer.NewBytesBuffer([]byte(jstr))
 	lex := New(buf)
 	go lex.Run()
 

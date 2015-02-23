@@ -12,7 +12,7 @@ import (
 type (
 	// Holds the state of the scanner
 	Lexer struct {
-		input     buffer.Bufferer
+		input     *buffer.Buffer
 		stack     []rune    // Lexer stack
 		pos       int       // Current stack position
 		lineNum   int       // Line number
@@ -59,10 +59,10 @@ const (
 )
 
 // Creates a new scanner for the input buffer
-func New(input buffer.Bufferer) *Lexer {
+func New(input *buffer.Buffer) *Lexer {
 	return &Lexer{
 		input:   input,
-		items:   make(chan Item),
+		items:   make(chan Item, 100),
 		lineNum: 1,
 		colNum:  0,
 	}

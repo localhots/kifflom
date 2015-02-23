@@ -25,7 +25,7 @@ type (
 )
 
 // Creates a new parser
-func New(buf buffer.Bufferer, sels []string) *Parser {
+func New(buf *buffer.Buffer, sels []string) *Parser {
 	return &Parser{
 		lex: lexer.New(buf),
 		ctx: &context{

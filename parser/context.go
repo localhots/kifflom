@@ -88,28 +88,40 @@ func parseSelectors(sels []string) map[string]*context {
 }
 
 func parseSelector(sel string) []expectation {
+	tmp := strings.Replace(sel, ".", "/.", -1)
+	tmp = strings.Replace(tmp, "#", "/#", -1)
+	parts := strings.Split(tmp[1:], "/")
+
 	exps := []expectation{}
-	parts := strings.Split(sel[1:], "/")
 	for _, part := range parts {
 		c := expectation{}
-		if len(part) > 2 && part[:1] == "[" && part[len(part)-1:] == "]" {
-			c.typ = array
-			part = part[1 : len(part)-1]
-			if part == "*" {
-				c.greedy = true
-			} else if i, err := strconv.ParseInt(part, 10, 64); err == nil {
-				c.index = i
-			} else {
-				panic("Array index should be numeric: " + part)
-			}
-		} else {
+
+		if len(part) < 2 {
+			panic("Invalid selector: " + sel)
+		} else if part[:1] == "." {
 			c.typ = object
-			if part == "*" {
-				c.greedy = true
-			} else {
-				c.key = part
+		} else if part[:1] == "#" {
+			c.typ = array
+		} else {
+			panic("Invalid selector: " + sel)
+		}
+
+		if part[1:2] == "*" {
+			c.greedy = true
+			if len(part) > 2 {
+				panic("Invalid selector: " + sel)
 			}
 		}
+
+		if c.greedy {
+		} else if c.typ == object {
+			c.key = part[1:]
+		} else if i, err := strconv.ParseInt(part[1:], 10, 64); err == nil {
+			c.index = i
+		} else {
+			panic("Array index should be numeric: " + part)
+		}
+
 		exps = append(exps, c)
 	}
 

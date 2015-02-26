@@ -87,10 +87,15 @@ func parseSelectors(sels []string) map[string]*context {
 	return ctxs
 }
 
+// Format: .bananas#0.weight
+// There are two selector types:
+// * object property: .prop
+// * array index: #1
+// Greedy selectors are supported for both types: .* and #*
 func parseSelector(sel string) []expectation {
-	tmp := strings.Replace(sel, ".", "/.", -1)
-	tmp = strings.Replace(tmp, "#", "/#", -1)
-	parts := strings.Split(tmp[1:], "/")
+	tmp := strings.Replace(sel, ".", "/.", -1) // "/.bananas#0/.weight"
+	tmp = strings.Replace(tmp, "#", "/#", -1)  // "/.bananas/#0/.weight"
+	parts := strings.Split(tmp[1:], "/")       // [".bananas", "#0", ".weight"]
 
 	exps := []expectation{}
 	for _, part := range parts {
@@ -111,9 +116,6 @@ func parseSelector(sel string) []expectation {
 			if len(part) > 2 {
 				panic("Invalid selector: " + sel)
 			}
-		}
-
-		if c.greedy {
 		} else if c.typ == object {
 			c.key = part[1:]
 		} else if i, err := strconv.ParseInt(part[1:], 10, 64); err == nil {

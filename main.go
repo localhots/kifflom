@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/davecheney/profile"
-	"github.com/localhots/punk/buffer"
-	"github.com/localhots/punk/parser"
+	"github.com/localhots/kifflom/buffer"
+	"github.com/localhots/kifflom/parser"
 )
 
 func main() {

@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/localhots/punk/buffer"
-	"github.com/localhots/punk/lexer"
+	"github.com/localhots/kifflom/buffer"
+	"github.com/localhots/kifflom/lexer"
 )
 
 type (

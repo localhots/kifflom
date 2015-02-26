@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/localhots/punk/buffer"
+	"github.com/localhots/kifflom/buffer"
 )
 
 func BenchmarkRun(t *testing.B) {

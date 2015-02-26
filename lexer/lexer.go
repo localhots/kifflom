@@ -6,7 +6,7 @@ package lexer
 import (
 	"fmt"
 
-	"github.com/localhots/punk/buffer"
+	"github.com/localhots/kifflom/buffer"
 )
 
 type (

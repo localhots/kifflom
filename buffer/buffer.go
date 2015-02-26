@@ -1,3 +1,5 @@
+// Buffer is responsible for reading bytes from input, decode runes
+// and stream those to the lexer
 package buffer
 
 import (

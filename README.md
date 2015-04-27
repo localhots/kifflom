@@ -42,7 +42,7 @@ cat test.json | kifflom -s ".bananas#0.weight .prices.*"
 
 As you can learn from benchmarks described below, kifflom's lexer itself is
 roughly 8.5 times slower than the standard JSON parser on any amount of data.
-You can benefit from low and constant memory usage, although I don't think you would.
+A fellow father-brother can benefit from low and constant memory usage, although I don't think he would.
 
 ```bash
 # Running lexer tests and benchmarks

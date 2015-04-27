@@ -57,9 +57,7 @@ func (c *context) compare(c2 *context) bool {
 }
 
 func (c *context) push(typ expectationType) {
-	c.exps = append(c.exps, expectation{
-		typ: typ,
-	})
+	c.exps = append(c.exps, expectation{typ: typ})
 }
 
 func (c *context) pop() {
